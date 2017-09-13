@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'index')}">
+<body>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+
+function onRouteFromChanged() {
+	var routes = [[${allRoutes}]];
+    var selectedRoute = document.getElementById("routeFrom").value;
+	if(selectedRoute != " ") {
+		document.getElementById("tripDep").value = selectedRoute;
+		var opt = routes[selectedRoute];
+		var select = document.getElementById("routeTo");
+    	while (select.length > 0) {
+        	select.remove(select.length-1);
+    	}
+    	var option = document.createElement('option');
+        option.text = option.value = " ";
+        select.add(option);
+    	for(var i = 0; i < opt.length; i++) {
+        	var option = document.createElement('option');
+        	option.text = option.value = opt[i];
+        	select.add(option);
+    	}
+	}
+}
+
+function getAirline(code) {
+	if(code=="W6") {
+		return "Wizzair";
+	} else if(code=="FR") {
+		return "Ryanair";
+	}
+	return "";
+}
+
+function onRouteToChanged() {
+	var routeFrom = document.getElementById("routeFrom").value;
+	if(routeFrom != " ") {
+		var routeTo = document.getElementById("routeTo").value;
+		if(routeTo != " ") {
+			document.getElementById("tripDest").value = routeTo;
+			var details = [[${routesDetails}]];
+    		var lista = details[routeFrom+","+routeTo];
+    		if(lista!=" ") {
+    			var zawartosc = "<table>";
+    			for(var i=0; i<lista.length; i++) {
+    				zawartosc += "<tr onclick=\"myFunction(this)\"><td>"+(i+1)+"</td><td>"+routeFrom+" - ";
+    				var detale = lista[i].split(",");
+    				if(detale.length == 1) {
+    					var linia = getAirline(detale[0]);
+    					zawartosc += routeTo+"</td><td>"+linia;
+    				} else if(detale.length == 3) {
+    					var miasto1 = detale[0];
+    					var linia1 = getAirline(detale[1]);
+    					var linia2 = getAirline(detale[2]);
+    					zawartosc += miasto1+"</td><td>"+linia1+"</td><td>";
+    					zawartosc += miasto1+" - "+routeTo+"</td><td>"+linia2;
+    				}  else if(detale.length == 5) {
+    					var miasto1 = detale[0];
+    					var linia1 = getAirline(detale[1]);
+    					var miasto2 = detale[2];
+    					var linia2 = getAirline(detale[3]);
+    					var linia3 = getAirline(detale[4]);
+    					zawartosc += miasto1+"</td><td>"+linia1+"</td><td>";
+    					zawartosc += miasto1+" - "+miasto2+"</td><td>"+linia2+"</td><td>";
+    					zawartosc += miasto2+" - "+routeTo+"</td><td>"+linia3;
+    				}
+    				zawartosc += "</td></tr>";
+    			}
+    			zawartosc += "</table>";
+    			document.getElementById("lista").innerHTML = zawartosc;
+    		}
+		}
+	}
+}
+
+function myFunction(x) {
+	var contentLink = "";
+	var kolor = "";
+	var polaczenie = "";
+	
+	for(var i=1; i<x.cells.length; i++) {
+		if(i%2!=0) {
+			var miasta = x.cells[i].innerHTML;
+			var elementy = miasta.split(" ");
+			for(var j=elementy.length-1; j>0; j--) {
+				if(elementy[j].includes("(")) {
+					var temp = elementy[j];
+					var kod = temp.substring(1, temp.length-1);
+					if(kod.length==3) {
+						if(polaczenie!="") {
+							polaczenie = kod+polaczenie;
+							break;
+						} else {
+							polaczenie = "-"+kod;
+						}
+					}
+				}
+			}
+		} else {
+			var linia = x.cells[i].innerHTML;
+			if(linia=="Ryanair") {
+				kolor = "color:cyan,";
+			} else if(linia=="Wizzair") {
+				kolor = "color:magenta,";
+			}
+			contentLink += kolor+polaczenie+",";
+			polaczenie = "";
+		}
+	}
+	var params = contentLink.substring(0, contentLink.length-1);
+	var imgLink = "http://www.gcmap.com/map?P="+params+"&MS=bm&MR=300&MX=720x400&PM=*";
+    document.getElementById("mapa").src = imgLink;
+}
+
+/*]]>*/
+</script>
+
+<div class="jumbotron text-center">
+   <h1>Plan2Fly</h1>
+  
+  <img 
+    id="mapa"
+    style="-webkit-user-select: none;background-position: 0px 0px, 10px 10px;background-size: 20px 20px;background-image:linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee 100%),linear-gradient(45deg, #eee 25%, white 25%, white 75%, #eee 75%, #eee 100%);cursor: zoom-in;" 
+    src="http://www.gcmap.com/map?P=color:red,GDN&amp;MS=bm&amp;MR=300&amp;MX=720x400&amp;PM=*" 
+    width="538" height="299">
+    <br/><br/>
+	<select class="form-control" id="routeFrom" name="routeFrom" onchange="onRouteFromChanged()">
+        <option th:each="stat : ${recordsFrom}"
+                th:value="${stat}"
+                th:text="${stat}"/>
+    </select>
+    <select class="form-control" id="routeTo" name="routeTo" onchange="onRouteToChanged()"></select>
+  	<br/>
+  	DATA
+  	<br/>
+  	<p id="lista"> </p>
+  	
+    
+    <br/><br/>
+    <form action="#" th:action="@{/}" th:object="${tripForm}" method="post">
+    <input type="hidden" id="tripDep" th:field="*{departure}">
+    <input type="hidden" id="tripDest" th:field="*{destination}">
+    <input type="hidden" id="tripMonth" th:field="*{month}">
+    <button type="submit" class="myButton"><span class="glyphicon glyphicon-flash"></span> Szukaj</button>
+    </form>
+  </div>
+
+</body>
+</html>
